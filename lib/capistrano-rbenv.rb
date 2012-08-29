@@ -1,3 +1,4 @@
+require "capistrano-rbenv/deploy"
 require "capistrano-rbenv/version"
 
 module Capistrano
