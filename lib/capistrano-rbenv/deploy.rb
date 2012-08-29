@@ -130,4 +130,8 @@ module Capistrano
   end
 end
 
+if Capistrano::Configuration.instance
+  Capistrano::Configuration.instance.extend(Capistrano::Rbenv)
+end
+
 # vim:set ft=ruby ts=2 sw=2 :
