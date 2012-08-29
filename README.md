@@ -25,7 +25,7 @@ To setup rbenv for your application, add following in you `config/deploy.rb`.
     # in "config/deploy.rb"
     require 'capistrano-rbenv'
 
-Following options are available to manage your virtualenv.
+Following options are available to manage your rbenv.
 
  * `:rbenv_branch` - the git branch to install `rbenv` from. use `master` by default.
  * `:rbenv_bundler_gem` - package name of `bundler`.
