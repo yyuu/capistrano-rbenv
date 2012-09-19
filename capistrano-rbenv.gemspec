@@ -13,7 +13,7 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.name          = "capistrano-rbenv"
   gem.require_paths = ["lib"]
-  gem.version       = Capistrano::Rbenv::VERSION
+  gem.version       = Capistrano::RbEnv::VERSION
 
   gem.add_dependency("capistrano")
 end

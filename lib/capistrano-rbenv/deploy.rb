@@ -1,5 +1,5 @@
 module Capistrano
-  module Rbenv
+  module RbEnv
     def self.extended(configuration)
       configuration.load {
         namespace(:rbenv) {
@@ -130,7 +130,7 @@ module Capistrano
 end
 
 if Capistrano::Configuration.instance
-  Capistrano::Configuration.instance.extend(Capistrano::Rbenv)
+  Capistrano::Configuration.instance.extend(Capistrano::RbEnv)
 end
 
 # vim:set ft=ruby ts=2 sw=2 :
