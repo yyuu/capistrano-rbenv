@@ -16,7 +16,6 @@ module Capistrano
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
           _cset(:rbenv_branch, 'master')
 
-          _cset(:rbenv_use_plugins, true)
           _cset(:rbenv_plugins, {
             'ruby-build' => 'git://github.com/sstephenson/ruby-build.git',
           })
@@ -73,7 +72,7 @@ module Capistrano
           desc("Update rbenv installation.")
           task(:update, :except => { :no_release => true }) {
             _rbenv_sync(rbenv_repository, rbenv_path, rbenv_branch)
-            plugins.update if rbenv_use_plugins
+            plugins.update
           }
 
           desc("Purge rbenv.")

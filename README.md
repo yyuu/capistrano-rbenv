@@ -34,11 +34,10 @@ Following options are available to manage your rbenv.
  * `:rbenv_path` - the path where `rbenv` will be installed. use `$HOME/.rbenv` by default.
  * `:rbenv_plugins_options` - install options for rbenv plugins.
  * `:rbenv_plugins` - rbenv plugins to install. install `ruby-build` by default.
- * `:rbenv_repository` 'git://github.com/sstephenson/rbenv.git')
- * `:rbenv_ruby_dependencies` %w(build-essential libreadline6-dev zlib1g-dev libssl-dev bison))
+ * `:rbenv_repository` - repository URL of rbenv.
+ * `:rbenv_ruby_dependencies` - dependency packages.
  * `:rbenv_ruby_version` - the ruby version to install. install `1.9.3-p194` by default.
  * `:rbenv_use_bundler` - controls whether installing bundler or not. `true` by default.
- * `:rbenv_use_plugins` - controls whether installing rbenv plugins or not. `true` by default.
 
 ## Contributing
 
