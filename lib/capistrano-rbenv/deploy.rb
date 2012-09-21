@@ -123,9 +123,9 @@ module Capistrano
               case rbenv_platform
               when /(debian|ubuntu)/i
                 # dpkg-query is faster than apt-get on querying if packages are installed
-                run("dpkg-query --show #{rbenv_ruby_dependencies.join(' ')} 2>/dev/null || #{sudo} apt-get -y install #{rbenv_ruby_dependencies.join(' ')}")
+                run("dpkg-query --show #{rbenv_ruby_dependencies.join(' ')} >/dev/null 2>&1 || #{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.join(' ')}")
               when /redhat/i
-                run("#{sudo} yum install -y #{rbenv_ruby_dependencies.join(' ')}")
+                run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.join(' ')}")
               else
                 # nop
               end
@@ -153,7 +153,7 @@ module Capistrano
               f = "grep #{rbenv_bundler_gem}"
               i = "#{rbenv_bundler_gem}"
             end
-            run("unset -v GEM_HOME; #{gem} query #{q} 2>/dev/null | #{f} || #{gem} install #{i}")
+            run("unset -v GEM_HOME; #{gem} query #{q} 2>/dev/null | #{f} || #{gem} install -q #{i}")
             run("#{rbenv_cmd} rehash && #{bundle_cmd} version")
           }
         }
