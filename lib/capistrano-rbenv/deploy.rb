@@ -135,7 +135,9 @@ module Capistrano
           desc("Build ruby within rbenv.")
           task(:build, :except => { :no_release => true }) {
             ruby = fetch(:rbenv_ruby_cmd, 'ruby')
-            run("#{rbenv_cmd} whence #{ruby} | grep -q #{rbenv_ruby_version} || #{rbenv_cmd} install #{rbenv_ruby_version}")
+            if rbenv_ruby_version != 'system'
+              run("#{rbenv_cmd} whence #{ruby} | grep -q #{rbenv_ruby_version} || #{rbenv_cmd} install #{rbenv_ruby_version}")
+            end
             run("#{rbenv_cmd} exec #{ruby} --version")
           }
 
