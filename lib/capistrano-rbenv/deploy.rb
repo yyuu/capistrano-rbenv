@@ -10,8 +10,7 @@ module Capistrano
             File.join(rbenv_path, 'bin', 'rbenv')
           }
           _cset(:rbenv_cmd) { # to use custom rbenv_path, we use `env` instead of cap's default_environment.
-            path = "#{rbenv_path}/bin:#{rbenv_path}/shims:$PATH"
-            "env PATH=#{path.dump()} #{rbenv_bin}"
+            "env RBENV_VERSION=#{rbenv_ruby_version.dump} #{rbenv_bin}"
           }
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
           _cset(:rbenv_branch, 'master')
@@ -105,7 +104,7 @@ module Capistrano
           task(:build, :except => { :no_release => true }) {
             ruby = fetch(:rbenv_ruby_cmd, 'ruby')
             run("#{rbenv_cmd} whence #{ruby} | grep -q #{rbenv_ruby_version} || #{rbenv_cmd} install #{rbenv_ruby_version}")
-            run("#{rbenv_cmd} global #{rbenv_ruby_version} && #{rbenv_cmd} exec #{ruby} --version")
+            run("#{rbenv_cmd} exec #{ruby} --version")
           }
 
           _cset(:rbenv_bundler_gem, 'bundler')
