@@ -94,7 +94,7 @@ module Capistrano
           }
 
           _cset(:rbenv_platform) {
-            capture((<<-EOS).gsub(/\s+/, ' '))
+            capture((<<-EOS).gsub(/\s+/, ' ')).strip
               if test -f /etc/debian_version; then
                 if test -f /etc/lsb-release && grep -i -q DISTRIB_ID=Ubuntu /etc/lsb-release; then
                   echo ubuntu;
