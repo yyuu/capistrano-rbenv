@@ -111,9 +111,9 @@ module Capistrano
           _cset(:rbenv_ruby_dependencies) {
             case rbenv_platform
             when /(debian|ubuntu)/i
-              %w(build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
+              %w(git-core build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
             when /redhat/i
-              %w(autoconf glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
+              %w(git-core autoconf glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
             else
               []
             end
@@ -122,8 +122,7 @@ module Capistrano
             unless rbenv_ruby_dependencies.empty?
               case rbenv_platform
               when /(debian|ubuntu)/i
-                # dpkg-query is faster than apt-get on querying if packages are installed
-                run("dpkg-query --show #{rbenv_ruby_dependencies.join(' ')} >/dev/null 2>&1 || #{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.join(' ')}")
+                run("#{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.join(' ')}")
               when /redhat/i
                 run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.join(' ')}")
               else
