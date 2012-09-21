@@ -38,7 +38,6 @@ module Capistrano
           }
 
           _cset(:rbenv_ruby_version, '1.9.3-p194')
-          _cset(:rbenv_ruby_dependencies, %w(build-essential libreadline6-dev zlib1g-dev libssl-dev bison))
 
           _cset(:rbenv_use_bundler, true)
           set(:bundle_cmd) { # override bundle_cmd in "bundler/capistrano"
@@ -94,9 +93,42 @@ module Capistrano
             # nop
           }
 
+          _cset(:rbenv_platform) {
+            capture((<<-EOS).gsub(/\s+/, ' '))
+              if test -f /etc/debian_version; then
+                if test -f /etc/lsb-release && grep -i -q DISTRIB_ID=Ubuntu /etc/lsb-release; then
+                  echo ubuntu;
+                else
+                  echo debian;
+                fi;
+              elif test -f /etc/redhat-release; then
+                echo redhat;
+              else
+                echo unknown;
+              fi;
+            EOS
+          }
+          _cset(:rbenv_ruby_dependencies) {
+            case rbenv_platform
+            when /(debian|ubuntu)/i
+              %w(build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
+            when /redhat/i
+              %w(autoconf glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
+            else
+              []
+            end
+          }
           task(:dependencies, :except => { :no_release => true }) {
-            unless rbenv_ruby_dependencies.empty? # dpkg-query is faster than apt-get on querying if packages are installed
-              run("dpkg-query --show #{rbenv_ruby_dependencies.join(' ')} 2>/dev/null || #{sudo} apt-get -y install #{rbenv_ruby_dependencies.join(' ')}")
+            unless rbenv_ruby_dependencies.empty?
+              case rbenv_platform
+              when /(debian|ubuntu)/i
+                # dpkg-query is faster than apt-get on querying if packages are installed
+                run("dpkg-query --show #{rbenv_ruby_dependencies.join(' ')} 2>/dev/null || #{sudo} apt-get -y install #{rbenv_ruby_dependencies.join(' ')}")
+              when /redhat/i
+                run("#{sudo} yum install -y #{rbenv_ruby_dependencies.join(' ')}")
+              else
+                # nop
+              end
             end
           }
 
