@@ -89,8 +89,56 @@ module Capistrano
             }
           }
 
+          _cset(:rbenv_configure_home) { capture("echo $HOME").chomp }
+          _cset(:rbenv_configure_shell) { capture("echo $SHELL").chomp }
+          _cset(:rbenv_configure_files) {
+            if fetch(:rbenv_configure_basenames, nil)
+              [ rbenv_configure_basenames ].flatten.map { |basename|
+                File.join(rbenv_configure_home, basename)
+              }
+            else
+              case File.basename(rbenv_configure_shell)
+              when /bash/
+                [ File.join(rbenv_configure_home, '.bash_profile') ]
+              when /zsh/
+                [ File.join(rbenv_configure_home, '.zshenv') ]
+              else # other sh compatible shell such like dash
+                [ File.join(rbenv_configure_home, '.profile') ]
+              end
+            end
+          }
+          _cset(:rbenv_configure_script) {
+            (<<-EOS).gsub(/^\s*/, '')
+              export PATH="#{rbenv_path}/bin:$PATH"
+              eval "$(rbenv init -)"
+            EOS
+          }
           task(:configure, :except => { :no_release => true }) {
-            # nop
+            if fetch(:rbenv_use_configure, true)
+              script = File.join('/tmp', "rbenv.#{$$}")
+              config = [ rbenv_configure_files ].flatten
+              config_map = Hash[ config.map { |f| [f, File.join('/tmp', "#{File.basename(f)}.#{$$}")] } ]
+              begin
+                execute = []
+                put(rbenv_configure_script, script)
+                config_map.each { |file, temp|
+                  execute << "touch #{file}"
+                  ## (1) copy original config to temporaly file and then modify
+                  execute << "cp -fp #{file} #{temp}" 
+                  execute << "sed -i -e '/^\#\#BEGIN:rbenv/,/^\#\#END:rbenv/d' #{temp}"
+                  execute << "echo '##BEGIN:rbenv' >> #{temp}"
+                  execute << "cat #{script} >> #{temp}"
+                  execute << "echo '##END:rbenv' >> #{temp}"
+                  ## (2) update config only if it is needed
+                  execute << "cp -fp #{file} #{file}.orig"
+                  execute << "( diff -u #{file} #{temp} || mv -f #{temp} #{file} )"
+                }
+                run(execute.join(' && '))
+              ensure
+                remove = [ script ] + config_map.values
+                run("rm -f #{remove.join(' ')}") rescue nil
+              end
+            end
           }
 
           _cset(:rbenv_platform) {
