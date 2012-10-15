@@ -109,10 +109,12 @@ module Capistrano
           }
           _cset(:rbenv_configure_script) {
             (<<-EOS).gsub(/^\s*/, '')
+              # Configured by capistrano-rbenv. Do not edit directly.
               export PATH="#{rbenv_path}/bin:$PATH"
               eval "$(rbenv init -)"
             EOS
           }
+          _cset(:rbenv_configure_signature, '##rbenv:configure')
           task(:configure, :except => { :no_release => true }) {
             if fetch(:rbenv_use_configure, true)
               script = File.join('/tmp', "rbenv.#{$$}")
@@ -122,13 +124,12 @@ module Capistrano
                 execute = []
                 put(rbenv_configure_script, script)
                 config_map.each { |file, temp|
-                  execute << "touch #{file}"
                   ## (1) copy original config to temporaly file and then modify
-                  execute << "cp -fp #{file} #{temp}" 
-                  execute << "sed -i -e '/^\#\#BEGIN:rbenv/,/^\#\#END:rbenv/d' #{temp}"
-                  execute << "echo '##BEGIN:rbenv' >> #{temp}"
+                  execute << "( cp -fp #{file} #{temp} || touch #{temp} )" 
+                  execute << "sed -i -e '/^#{Regexp.escape(rbenv_configure_signature)}/,/^#{Regexp.escape(rbenv_configure_signature)}/d' #{temp}"
+                  execute << "echo #{rbenv_configure_signature.dump} >> #{temp}"
                   execute << "cat #{script} >> #{temp}"
-                  execute << "echo '##END:rbenv' >> #{temp}"
+                  execute << "echo #{rbenv_configure_signature.dump} >> #{temp}"
                   ## (2) update config only if it is needed
                   execute << "cp -fp #{file} #{file}.orig"
                   execute << "( diff -u #{file} #{temp} || mv -f #{temp} #{file} )"
