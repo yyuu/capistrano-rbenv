@@ -186,7 +186,7 @@ module Capistrano
             if rbenv_ruby_version != 'system'
               run("#{rbenv_cmd} whence #{ruby} | grep -q #{rbenv_ruby_version} || #{rbenv_cmd} install #{rbenv_ruby_version}")
             end
-            run("#{rbenv_cmd} exec #{ruby} --version")
+            run("#{rbenv_cmd} exec #{ruby} --version && #{rbenv_cmd} global #{rbenv_ruby_version}")
           }
 
           _cset(:rbenv_bundler_gem, 'bundler')
