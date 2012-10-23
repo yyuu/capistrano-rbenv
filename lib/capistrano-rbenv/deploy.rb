@@ -97,13 +97,15 @@ module Capistrano
                 File.join(rbenv_configure_home, basename)
               }
             else
+              bash_profile = File.join(rbenv_configure_home, '.bash_profile')
+              profile = File.join(rbenv_configure_home, '.profile')
               case File.basename(rbenv_configure_shell)
               when /bash/
-                [ File.join(rbenv_configure_home, '.bash_profile') ]
+                [ capture("test -f #{profile.dump} && echo #{profile.dump} || echo #{bash_profile.dump}") ]
               when /zsh/
                 [ File.join(rbenv_configure_home, '.zshenv') ]
               else # other sh compatible shell such like dash
-                [ File.join(rbenv_configure_home, '.profile') ]
+                [ profile ]
               end
             end
           }
@@ -125,7 +127,8 @@ module Capistrano
                 put(rbenv_configure_script, script)
                 config_map.each { |file, temp|
                   ## (1) copy original config to temporaly file and then modify
-                  execute << "( cp -fp #{file} #{temp} || touch #{temp} )" 
+                  execute << "( test -f #{file} || touch #{file} )"
+                  execute << "cp -fp #{file} #{temp}" 
                   execute << "sed -i -e '/^#{Regexp.escape(rbenv_configure_signature)}/,/^#{Regexp.escape(rbenv_configure_signature)}/d' #{temp}"
                   execute << "echo #{rbenv_configure_signature.dump} >> #{temp}"
                   execute << "cat #{script} >> #{temp}"
