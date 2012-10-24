@@ -187,7 +187,7 @@ module Capistrano
           task(:build, :except => { :no_release => true }) {
             ruby = fetch(:rbenv_ruby_cmd, 'ruby')
             if rbenv_ruby_version != 'system'
-              run("#{rbenv_cmd} whence #{ruby} | grep -q #{rbenv_ruby_version} || #{rbenv_cmd} install #{rbenv_ruby_version}")
+              run("#{rbenv_bin} whence #{ruby} | fgrep -q #{rbenv_ruby_version} || #{rbenv_bin} install #{rbenv_ruby_version}")
             end
             run("#{rbenv_cmd} exec #{ruby} --version && #{rbenv_cmd} global #{rbenv_ruby_version}")
           }
@@ -197,11 +197,11 @@ module Capistrano
             gem = "#{rbenv_cmd} exec gem"
             if v = fetch(:rbenv_bundler_version, nil)
               q = "-n #{rbenv_bundler_gem} -v #{v}"
-              f = "grep #{rbenv_bundler_gem} | grep #{v}"
+              f = "fgrep #{rbenv_bundler_gem} | fgrep #{v}"
               i = "-v #{v} #{rbenv_bundler_gem}"
             else
               q = "-n #{rbenv_bundler_gem}"
-              f = "grep #{rbenv_bundler_gem}"
+              f = "fgrep #{rbenv_bundler_gem}"
               i = "#{rbenv_bundler_gem}"
             end
             run("unset -v GEM_HOME; #{gem} query #{q} 2>/dev/null | #{f} || #{gem} install -q #{i}")
