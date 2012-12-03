@@ -37,7 +37,7 @@ module Capistrano
             end
           }
 
-          _cset(:rbenv_ruby_version, '1.9.3-p194')
+          _cset(:rbenv_ruby_version, "1.9.3-p327")
 
           _cset(:rbenv_use_bundler, true)
           set(:bundle_cmd) { # override bundle_cmd in "bundler/capistrano"
