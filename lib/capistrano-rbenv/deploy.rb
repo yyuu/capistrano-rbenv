@@ -1,3 +1,7 @@
+
+require "capistrano/configuration"
+require "capistrano/recipes/deploy/scm"
+
 module Capistrano
   module RbEnv
     def self.extended(configuration)
@@ -24,19 +28,6 @@ module Capistrano
           _cset(:rbenv_plugins_path) {
             File.join(rbenv_path, 'plugins')
           }
-
-          _cset(:rbenv_git) {
-            if scm == :git
-              if fetch(:scm_command, :default) == :default
-                fetch(:git, 'git')
-              else
-                scm_command
-              end
-            else
-              fetch(:git, 'git')
-            end
-          }
-
           _cset(:rbenv_ruby_version, "1.9.3-p327")
 
           _cset(:rbenv_use_bundler, true)
@@ -54,22 +45,40 @@ module Capistrano
           }
           after 'deploy:setup', 'rbenv:setup'
 
-          def _rbenv_sync(repository, destination, revision)
-            git = rbenv_git
-            remote = 'origin'
-            verbose = "-q"
-            run((<<-E).gsub(/\s+/, ' '))
-              if test -d #{destination}; then
-                cd #{destination} && #{git} fetch #{verbose} #{remote} && #{git} fetch --tags #{verbose} #{remote} && #{git} merge #{verbose} #{remote}/#{revision};
+          def rbenv_update_repository(destination, options={})
+            configuration = Capistrano::Configuration.new()
+            variables.merge(options).each do |key, val|
+              configuration.set(key, val)
+            end
+            configuration.set(:source) { Capistrano::Deploy::SCM.new(configuration[:scm], configuration) }
+            configuration.set(:revision) { configuration[:source].head }
+            configuration.set(:real_revision) {
+              configuration[:source].local.query_revision(configuration[:revision]) { |cmd|
+                with_env("LC_ALL", "C") { run_locally(cmd) }
+              }
+            }
+            source = configuration[:source]
+            revision = configuration[:real_revision]
+            #
+            # we cannot use source.sync since it cleans up untacked files in the repository.
+            # currently we are just calling git sub-commands directly to avoid the problems.
+            #
+            verbose = configuration[:scm_verbose] ? nil : "-q"
+            run((<<-EOS).gsub(/\s+/, ' ').strip)
+              if [ -d #{destination} ]; then
+                cd #{destination} &&
+                #{source.command} fetch #{verbose} #{source.origin} &&
+                #{source.command} fetch --tags #{verbose} #{source.origin} &&
+                #{source.command} reset #{verbose} --hard #{revision};
               else
-                #{git} clone #{verbose} #{repository} #{destination} && cd #{destination} && #{git} checkout #{verbose} #{revision};
-              fi;
-            E
+                #{source.checkout(revision, destination)};
+              fi
+            EOS
           end
 
           desc("Update rbenv installation.")
           task(:update, :except => { :no_release => true }) {
-            _rbenv_sync(rbenv_repository, rbenv_path, rbenv_branch)
+            rbenv_update_repository(rbenv_path, :scm => :git, :repository => rbenv_repository, :branch => rbenv_branch)
             plugins.update
           }
 
@@ -84,7 +93,7 @@ module Capistrano
               rbenv_plugins.each { |name, repository|
                 options = ( rbenv_plugins_options[name] || {})
                 branch = ( options[:branch] || 'master' )
-                _rbenv_sync(repository, File.join(rbenv_plugins_path, name), branch)
+                rbenv_update_repository(File.join(rbenv_plugins_path, name), :scm => :git, :repository => repository, :branch => branch)
               }
             }
           }
