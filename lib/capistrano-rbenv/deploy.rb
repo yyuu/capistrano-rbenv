@@ -47,16 +47,16 @@ module Capistrano
 
           def rbenv_update_repository(destination, options={})
             configuration = Capistrano::Configuration.new()
+            options = {
+              :source => proc { Capistrano::Deploy::SCM.new(configuration[:scm], configuration) },
+              :revision => proc { configuration[:source].head },
+              :real_revision => proc {
+                configuration[:source].local.query_revision(configuration[:revision]) { |cmd| with_env("LC_ALL", "C") { run_locally(cmd) } }
+              },
+            }.merge(options)
             variables.merge(options).each do |key, val|
               configuration.set(key, val)
             end
-            configuration.set(:source) { Capistrano::Deploy::SCM.new(configuration[:scm], configuration) }
-            configuration.set(:revision) { configuration[:source].head }
-            configuration.set(:real_revision) {
-              configuration[:source].local.query_revision(configuration[:revision]) { |cmd|
-                with_env("LC_ALL", "C") { run_locally(cmd) }
-              }
-            }
             source = configuration[:source]
             revision = configuration[:real_revision]
             #
