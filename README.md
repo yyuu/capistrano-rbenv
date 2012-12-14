@@ -32,7 +32,6 @@ Following options are available to manage your rbenv.
  * `:rbenv_bundler_version` -  version for `bundler` package.
  * `:rbenv_cmd` - the `rbenv` command.
  * `:rbenv_path` - the path where `rbenv` will be installed. use `$HOME/.rbenv` by default.
- * `:rbenv_plugins_options` - install options for rbenv plugins.
  * `:rbenv_plugins` - rbenv plugins to install. install `ruby-build` by default.
  * `:rbenv_repository` - repository URL of rbenv.
  * `:rbenv_ruby_dependencies` - dependency packages.

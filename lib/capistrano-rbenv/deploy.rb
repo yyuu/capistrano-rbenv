@@ -19,12 +19,10 @@ module Capistrano
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
           _cset(:rbenv_branch, 'master')
 
-          _cset(:rbenv_plugins, {
-            'ruby-build' => 'git://github.com/sstephenson/ruby-build.git',
-          })
-          _cset(:rbenv_plugins_options, {
-            'ruby-build' => {:branch => 'master'},
-          })
+          _cset(:rbenv_plugins) {{
+            "ruby-build" => { :repository => "git://github.com/sstephenson/ruby-build.git", :branch => "master" },
+          }}
+          _cset(:rbenv_plugins_options, {}) # for backward compatibility. plugin options can be configured from :rbenv_plugins.
           _cset(:rbenv_plugins_path) {
             File.join(rbenv_path, 'plugins')
           }
@@ -90,11 +88,12 @@ module Capistrano
           namespace(:plugins) {
             desc("Update rbenv plugins.")
             task(:update, :except => { :no_release => true }) {
-              rbenv_plugins.each { |name, repository|
-                options = ( rbenv_plugins_options[name] || {})
-                branch = ( options[:branch] || 'master' )
-                rbenv_update_repository(File.join(rbenv_plugins_path, name), :scm => :git, :repository => repository, :branch => branch)
-              }
+              rbenv_plugins.each do |name, repository|
+                # for backward compatibility, obtain plugin options from :rbenv_plugins_options first
+                options = rbenv_plugins_options.fetch(name, {})
+                options = options.merge(Hash === repository ? repository : {:repository => repository})
+                rbenv_update_repository(File.join(rbenv_plugins_path, name), options.merge(:scm => :git))
+              end
             }
           }
 
