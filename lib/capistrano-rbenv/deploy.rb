@@ -182,9 +182,17 @@ module Capistrano
             unless rbenv_ruby_dependencies.empty?
               case rbenv_platform
               when /(debian|ubuntu)/i
-                run("#{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.join(' ')}")
+                begin
+                  run("/usr/bin/dpkg-query -s #{rbenv_ruby_dependencies.join(' ')} > /dev/null")
+                rescue
+                  run("#{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.join(' ')}")
+                end
               when /redhat/i
-                run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.join(' ')}")
+                begin
+                  run("/bin/rpm -qi #{rbenv_ruby_dependencies.join(' ')} > /dev/null")
+                rescue
+                  run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.join(' ')}")
+                end
               else
                 # nop
               end
