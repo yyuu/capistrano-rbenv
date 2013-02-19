@@ -109,7 +109,7 @@ module Capistrano
               profile = File.join(rbenv_configure_home, '.profile')
               case File.basename(rbenv_configure_shell)
               when /bash/
-                [ capture("test -f #{profile.dump} && echo #{profile.dump} || echo #{bash_profile.dump}") ]
+                [ capture("test -f #{profile.dump} && echo #{profile.dump} || echo #{bash_profile.dump}").chomp ]
               when /zsh/
                 [ File.join(rbenv_configure_home, '.zshenv') ]
               else # other sh compatible shell such like dash
