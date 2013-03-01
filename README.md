@@ -40,6 +40,7 @@ Following options are available to manage your rbenv.
  * `:rbenv_use_configure` - configure rbenv in your shell config or not. `true` by default. users who are using Chef/Puppet may prefer setting this value `false`.
  * `:rbenv_configure_files` - list of shell configuration files to be configured for rbenv. by default, guessing from user's `$SHELL` and `$HOME`.
  * `:rbenv_configure_basenames` - advanced option for `:rbenv_configure_files`. list of filename of your shell configuration files if you don't like the default value of `:rbenv_configure_files`.
+ * `:rbenv_install_dependencies` - controls whether installing dependencies or not. `true` by default.
 
 ## Contributing
 
@@ -53,6 +54,7 @@ Following options are available to manage your rbenv.
 
 - YAMASHITA Yuu (https://github.com/yyuu)
 - Geisha Tokyo Entertainment Inc. (http://www.geishatokyo.com/)
+- Nico Schottelius (http://www.nico.schottelius.org/)
 
 ## License
 

@@ -33,9 +33,11 @@ module Capistrano
             rbenv_use_bundler ? "#{rbenv_cmd} exec bundle" : 'bundle'
           }
 
+          _cset(:rbenv_install_dependencies, true)
+
           desc("Setup rbenv.")
           task(:setup, :except => { :no_release => true }) {
-            dependencies
+            dependencies if rbenv_install_dependencies
             update
             configure
             build
