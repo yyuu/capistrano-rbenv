@@ -41,6 +41,7 @@ Following options are available to manage your rbenv.
  * `:rbenv_configure_files` - list of shell configuration files to be configured for rbenv. by default, guessing from user's `$SHELL` and `$HOME`.
  * `:rbenv_configure_basenames` - advanced option for `:rbenv_configure_files`. list of filename of your shell configuration files if you don't like the default value of `:rbenv_configure_files`.
  * `:rbenv_install_dependencies` - controls whether installing dependencies or not. `true` by default.
+ * `:rbenv_define_default_environment` - define RBENV_ROOT and update PATH to use rbenv over capistrano. `true` by default.
 
 ## Contributing
 
