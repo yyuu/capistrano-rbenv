@@ -150,31 +150,49 @@ module Capistrano
               eval "$(rbenv init -)"
             EOS
           }
+
+          def _update_config(script_file, file, tempfile)
+            execute = []
+            ## (1) ensure copy source file exists
+            execute << "( test -f #{file.dump} || touch #{file.dump} )"
+            ## (2) copy originao config to temporary file
+            execute << "rm -f #{tempfile.dump}" # remove tempfile to preserve permissions of original file
+            execute << "cp -fp #{file.dump} #{tempfile.dump}" 
+            ## (3) modify temporary file
+            execute << "sed -i -e '/^#{Regexp.escape(rbenv_configure_signature)}/,/^#{Regexp.escape(rbenv_configure_signature)}/d' #{tempfile.dump}"
+            execute << "echo #{rbenv_configure_signature.dump} >> #{tempfile.dump}"
+            execute << "cat #{script_file.dump} >> #{tempfile.dump}"
+            execute << "echo #{rbenv_configure_signature.dump} >> #{tempfile.dump}"
+            ## (4) update config only if it is needed
+            execute << "cp -fp #{file.dump} #{(file + ".orig").dump}"
+            execute << "( diff -u #{file.dump} #{tempfile.dump} || mv -f #{tempfile.dump} #{file.dump} )"
+            begin
+              run(execute.join(" && "))
+            ensure
+              run("rm -f #{tempfile.dump}") rescue nil
+            end
+          end
+
+          def update_config(script_file, file)
+            begin
+              tempfile = capture("mktemp /tmp/rbenv.XXXXXXXXXX").strip
+              _update_config(script_file, file, tempfile)
+            ensure
+              run("rm -f #{tempfile.dump}") rescue nil
+            end
+          end
+
           _cset(:rbenv_configure_signature, '##rbenv:configure')
           task(:configure, :except => { :no_release => true }) {
             if fetch(:rbenv_use_configure, true)
-              script = File.join('/tmp', "rbenv.#{$$}")
-              config = [ rbenv_configure_files ].flatten
-              config_map = Hash[ config.map { |f| [f, File.join('/tmp', "#{File.basename(f)}.#{$$}")] } ]
               begin
-                execute = []
-                put(rbenv_configure_script, script)
-                config_map.each { |file, temp|
-                  ## (1) copy original config to temporaly file and then modify
-                  execute << "( test -f #{file} || touch #{file} )"
-                  execute << "cp -fp #{file} #{temp}" 
-                  execute << "sed -i -e '/^#{Regexp.escape(rbenv_configure_signature)}/,/^#{Regexp.escape(rbenv_configure_signature)}/d' #{temp}"
-                  execute << "echo #{rbenv_configure_signature.dump} >> #{temp}"
-                  execute << "cat #{script} >> #{temp}"
-                  execute << "echo #{rbenv_configure_signature.dump} >> #{temp}"
-                  ## (2) update config only if it is needed
-                  execute << "cp -fp #{file} #{file}.orig"
-                  execute << "( diff -u #{file} #{temp} || mv -f #{temp} #{file} )"
-                }
-                run(execute.join(' && '))
+                script_file = capture("mktemp /tmp/rbenv.XXXXXXXXXX").strip
+                top.put(rbenv_configure_script, script_file)
+                [ rbenv_configure_files ].flatten.each do |file|
+                  update_config(script_file, file)
+                end
               ensure
-                remove = [ script ] + config_map.values
-                run("rm -f #{remove.join(' ')}") rescue nil
+                run("rm -f #{script_file.dump}") rescue nil
               end
             end
           }
