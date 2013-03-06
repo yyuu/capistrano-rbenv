@@ -82,6 +82,26 @@ module Capistrano
             plugins.update
           }
 
+          _cset(:rbenv_define_default_environment, true)
+
+          def setup_default_environment
+            if rbenv_define_default_environment
+              env = fetch(:default_environment)
+              env['RBENV_ROOT'] = rbenv_path
+              env['PATH'] = "#{rbenv_path}/shims:#{rbenv_path}/bin:#{env['PATH'] || '$PATH'}"
+            end
+          end
+
+          on :start do
+            if top.namespaces.key?(:multistage)
+              after "multistage:ensure" do
+                setup_default_environment
+              end
+            else
+              setup_default_environment
+            end
+          end
+
           desc("Purge rbenv.")
           task(:purge, :except => { :no_release => true }) {
             run("rm -rf #{rbenv_path}")
