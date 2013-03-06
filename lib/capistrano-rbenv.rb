@@ -93,17 +93,16 @@ module Capistrano
             set(:default_environment, env)
           end
 
-          on :start do
-            if fetch(:rbenv_define_default_environment, true)
-              # workaround for `multistage` of capistrano-ext.
-              # https://github.com/yyuu/capistrano-rbenv/pull/5
-              if top.namespaces.key?(:multistage)
-                after "multistage:ensure" do
-                  setup_default_environment
-                end
-              else
-                setup_default_environment
-              end
+          _cset(:rbenv_define_default_environment, true)
+          # workaround for `multistage` of capistrano-ext.
+          # https://github.com/yyuu/capistrano-rbenv/pull/5
+          if top.namespaces.key?(:multistage)
+            after "multistage:ensure" do
+              setup_default_environment if rbenv_define_default_environment
+            end
+          else
+            on :start do
+              setup_default_environment if rbenv_define_default_environment
             end
           end
 
