@@ -166,11 +166,7 @@ module Capistrano
             ## (4) update config only if it is needed
             execute << "cp -fp #{file.dump} #{(file + ".orig").dump}"
             execute << "( diff -u #{file.dump} #{tempfile.dump} || mv -f #{tempfile.dump} #{file.dump} )"
-            begin
-              run(execute.join(" && "))
-            ensure
-              run("rm -f #{tempfile.dump}") rescue nil
-            end
+            run(execute.join(" && "))
           end
 
           def update_config(script_file, file)
