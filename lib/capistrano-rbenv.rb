@@ -7,13 +7,17 @@ module Capistrano
     def self.extended(configuration)
       configuration.load {
         namespace(:rbenv) {
+          _cset(:rbenv_root, "$HOME/.rbenv")
           _cset(:rbenv_path) {
-            capture("echo $HOME/.rbenv").chomp()
+            # expand to actual path to use this value since rbenv may be executed by users other than `:user`.
+            capture("echo #{rbenv_root.dump}").strip
           }
+          _cset(:rbenv_bin_path) { File.join(rbenv_path, "bin") }
+          _cset(:rbenv_shims_path) { File.join(rbenv_path, "shims") }
           _cset(:rbenv_bin) {
-            File.join(rbenv_path, 'bin', 'rbenv')
+            File.join(rbenv_bin_path, "rbenv")
           }
-          _cset(:rbenv_cmd) { # to use custom rbenv_path, we use `env` instead of cap's default_environment.
+          _cset(:rbenv_cmd) {
             "env RBENV_VERSION=#{rbenv_ruby_version.dump} #{rbenv_bin}"
           }
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
@@ -82,29 +86,30 @@ module Capistrano
             plugins.update
           }
 
-          _cset(:rbenv_define_default_environment, true)
-
           def setup_default_environment
-            if rbenv_define_default_environment
-              env = fetch(:default_environment)
-              env['RBENV_ROOT'] = rbenv_path
-              env['PATH'] = "#{rbenv_path}/shims:#{rbenv_path}/bin:#{env['PATH'] || '$PATH'}"
-            end
+            env = fetch(:default_environment, {}).dup
+            env["RBENV_ROOT"] = rbenv_path
+            env["PATH"] = [ rbenv_shims_path, rbenv_bin_path, env.fetch("PATH", "$PATH") ].join(":")
+            set(:default_environment, env)
           end
 
           on :start do
-            if top.namespaces.key?(:multistage)
-              after "multistage:ensure" do
+            if fetch(:rbenv_define_default_environment, true)
+              # workaround for `multistage` of capistrano-ext.
+              # https://github.com/yyuu/capistrano-rbenv/pull/5
+              if top.namespaces.key?(:multistage)
+                after "multistage:ensure" do
+                  setup_default_environment
+                end
+              else
                 setup_default_environment
               end
-            else
-              setup_default_environment
             end
           end
 
           desc("Purge rbenv.")
           task(:purge, :except => { :no_release => true }) {
-            run("rm -rf #{rbenv_path}")
+            run("rm -rf #{rbenv_path.dump}")
           }
 
           namespace(:plugins) {
@@ -142,7 +147,7 @@ module Capistrano
           _cset(:rbenv_configure_script) {
             (<<-EOS).gsub(/^\s*/, '')
               # Configured by capistrano-rbenv. Do not edit directly.
-              export PATH="#{rbenv_path}/bin:$PATH"
+              export PATH=#{[ rbenv_bin_path, "$PATH"].join(":").dump}
               eval "$(rbenv init -)"
             EOS
           }
