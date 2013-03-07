@@ -327,7 +327,7 @@ module Capistrano
           end
 
           def versions(options={})
-            capture("#{rbenv_cmd} versions --bare").split(/(?:\r?\n)+/)
+            capture("#{rbenv_cmd} versions --bare", options).split(/(?:\r?\n)+/)
           end
 
           _cset(:rbenv_install_ruby_threads) {
@@ -343,7 +343,7 @@ module Capistrano
           end
 
           def uninstall(version, options={})
-            run("#{rbenv_cmd} uninstall -f #{version.dump}")
+            run("#{rbenv_cmd} uninstall -f #{version.dump}", options)
           end
         }
       }
