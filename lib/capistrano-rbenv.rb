@@ -263,6 +263,11 @@ module Capistrano
             run("unset -v GEM_HOME; #{gem} query #{q} 2>/dev/null | #{f} || #{gem} install -q #{i}")
             run("#{rbenv_cmd} rehash && #{bundle_cmd} version")
           }
+
+          # call `rbenv rehash` to update shims.
+          def rehash()
+            run("#{rbenv_cmd} rehash")
+          end
         }
       }
     end
