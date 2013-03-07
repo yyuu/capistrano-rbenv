@@ -44,7 +44,19 @@ module Capistrano
             rbenv_install_bundler ? "#{rbenv_cmd} exec bundle" : "bundle"
           }
 
-          _cset(:rbenv_install_dependencies, true)
+          _cset(:rbenv_install_dependencies) {
+            if rbenv_ruby_dependencies.empty?
+              false
+            else
+              status = case rbenv_platform
+                when /(debian|ubuntu)/i
+                  capture("dpkg-query -s #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")} 1>/dev/null 2>&1 || echo required")
+                when /redhat/i
+                  capture("rpm -qi #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")} 1>/dev/null 2>&1 || echo required")
+                end
+              true and (/required/i =~ status)
+            end
+          }
 
           desc("Setup rbenv.")
           task(:setup, :except => { :no_release => true }) {
@@ -242,19 +254,9 @@ module Capistrano
             unless rbenv_ruby_dependencies.empty?
               case rbenv_platform
               when /(debian|ubuntu)/i
-                begin
-                  run("dpkg-query -s #{rbenv_ruby_dependencies.join(' ')} > /dev/null")
-                rescue
-                  run("#{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.join(' ')}")
-                end
+                run("#{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")}")
               when /redhat/i
-                begin
-                  run("rpm -qi #{rbenv_ruby_dependencies.join(' ')} > /dev/null")
-                rescue
-                  run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.join(' ')}")
-                end
-              else
-                # nop
+                run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")}")
               end
             end
           }
