@@ -259,13 +259,15 @@ module Capistrano
             end
           }
 
+          _cset(:rbenv_ruby_versions) { rbenv.versions }
           desc("Build ruby within rbenv.")
           task(:build, :except => { :no_release => true }) {
-            ruby = fetch(:rbenv_ruby_cmd, 'ruby')
-            if rbenv_ruby_version != 'system'
-              run("#{rbenv_bin} whence #{ruby} | fgrep -q #{rbenv_ruby_version} || #{rbenv_bin} install #{rbenv_ruby_version}")
+            ruby = fetch(:rbenv_ruby_cmd, "ruby")
+            if rbenv_ruby_version != "system" and not rbenv_ruby_versions.include?(rbenv_ruby_version)
+              rbenv.install(rbenv_ruby_version)
             end
-            run("#{rbenv_cmd} exec #{ruby} --version && #{rbenv_cmd} global #{rbenv_ruby_version}")
+            rbenv.exec("#{ruby} --version") # check if ruby is executable
+            rbenv.global(rbenv_ruby_version)
           }
 
           _cset(:rbenv_bundler_gem, 'bundler')
@@ -281,12 +283,57 @@ module Capistrano
               i = "#{rbenv_bundler_gem}"
             end
             run("unset -v GEM_HOME; #{gem} query #{q} 2>/dev/null | #{f} || #{gem} install -q #{i}")
-            run("#{rbenv_cmd} rehash && #{bundle_cmd} version")
+            rbenv.rehash
+            run("#{bundle_cmd} version")
           }
 
           # call `rbenv rehash` to update shims.
-          def rehash()
-            run("#{rbenv_cmd} rehash")
+          def rehash(options={})
+            run("#{rbenv_cmd} rehash", options)
+          end
+
+          def global(version, options={})
+            run("#{rbenv_cmd} global #{version.dump}", options)
+          end
+
+          def local(version, options={})
+            path = options.delete(:path)
+            if path
+              run("cd #{path.dump} && #{rbenv_cmd} local #{version.dump}", options)
+            else
+              run("#{rbenv_cmd} local #{version.dump}", options)
+            end
+          end
+
+          def which(command, options={})
+            path = options.delete(:path)
+            if path
+              capture("cd #{path.dump} && #{rbenv_cmd} which #{command.dump}", options).strip
+            else
+              capture("#{rbenv_cmd} which #{command.dump}", options).strip
+            end
+          end
+
+          def exec(command, options={})
+            # users of rbenv.exec must sanitize their command line.
+            path = options.delete(:path)
+            if path
+              run("cd #{path.dump} && #{rbenv_cmd} exec #{command}", options)
+            else
+              run("#{rbenv_cmd} exec #{command}", options)
+            end
+          end
+
+          def versions(options={})
+            capture("#{rbenv_cmd} versions --bare").split(/(?:\r?\n)+/)
+          end
+
+          def install(version, options={})
+            run("#{rbenv_cmd} install #{version.dump}")
+          end
+
+          def uninstall(version, options={})
+            run("#{rbenv_cmd} uninstall -f #{version.dump}")
           end
         }
       }
