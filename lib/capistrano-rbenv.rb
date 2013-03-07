@@ -56,7 +56,7 @@ module Capistrano
           }
           after 'deploy:setup', 'rbenv:setup'
 
-          def rbenv_update_repository(destination, options={})
+          def _update_repository(destination, options={})
             configuration = Capistrano::Configuration.new()
             options = {
               :source => proc { Capistrano::Deploy::SCM.new(configuration[:scm], configuration) },
@@ -89,11 +89,11 @@ module Capistrano
 
           desc("Update rbenv installation.")
           task(:update, :except => { :no_release => true }) {
-            rbenv_update_repository(rbenv_path, :scm => :git, :repository => rbenv_repository, :branch => rbenv_branch)
+            _update_repository(rbenv_path, :scm => :git, :repository => rbenv_repository, :branch => rbenv_branch)
             plugins.update
           }
 
-          def setup_default_environment
+          def _setup_default_environment
             env = fetch(:default_environment, {}).dup
             env["RBENV_ROOT"] = rbenv_path
             env["PATH"] = [ rbenv_shims_path, rbenv_bin_path, env.fetch("PATH", "$PATH") ].join(":")
@@ -112,11 +112,11 @@ module Capistrano
           # https://github.com/yyuu/capistrano-rbenv/pull/5
           if top.namespaces.key?(:multistage)
             after "multistage:ensure" do
-              setup_default_environment if rbenv_setup_default_environment
+              _setup_default_environment if rbenv_setup_default_environment
             end
           else
             on :start do
-              setup_default_environment if rbenv_setup_default_environment
+              _setup_default_environment if rbenv_setup_default_environment
             end
           end
 
@@ -132,7 +132,7 @@ module Capistrano
                 # for backward compatibility, obtain plugin options from :rbenv_plugins_options first
                 options = rbenv_plugins_options.fetch(name, {})
                 options = options.merge(Hash === repository ? repository : {:repository => repository})
-                rbenv_update_repository(File.join(rbenv_plugins_path, name), options.merge(:scm => :git))
+                _update_repository(File.join(rbenv_plugins_path, name), options.merge(:scm => :git))
               end
             }
           }
@@ -165,7 +165,7 @@ module Capistrano
             EOS
           }
 
-          def _update_config(script_file, file, tempfile)
+          def _do_update_config(script_file, file, tempfile)
             execute = []
             ## (1) ensure copy source file exists
             execute << "( test -f #{file.dump} || touch #{file.dump} )"
@@ -183,10 +183,10 @@ module Capistrano
             run(execute.join(" && "))
           end
 
-          def update_config(script_file, file)
+          def _update_config(script_file, file)
             begin
               tempfile = capture("mktemp /tmp/rbenv.XXXXXXXXXX").strip
-              _update_config(script_file, file, tempfile)
+              _do_update_config(script_file, file, tempfile)
             ensure
               run("rm -f #{tempfile.dump}") rescue nil
             end
@@ -206,7 +206,7 @@ module Capistrano
               script_file = capture("mktemp /tmp/rbenv.XXXXXXXXXX").strip
               top.put(rbenv_configure_script, script_file)
               [ rbenv_configure_files ].flatten.each do |file|
-                update_config(script_file, file)
+                _update_config(script_file, file)
               end
             ensure
               run("rm -f #{script_file.dump}") rescue nil
