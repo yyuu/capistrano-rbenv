@@ -32,9 +32,16 @@ module Capistrano
           }
           _cset(:rbenv_ruby_version, "1.9.3-p327")
 
-          _cset(:rbenv_use_bundler, true)
+          _cset(:rbenv_install_bundler) {
+            if variables.key?(:rbenv_use_bundler)
+              logger.info(":rbenv_use_bundler has been deprecated. use :rbenv_install_bundler instead.")
+              fetch(:rbenv_use_bundler, true)
+            else
+              true
+            end
+          }
           set(:bundle_cmd) { # override bundle_cmd in "bundler/capistrano"
-            rbenv_use_bundler ? "#{rbenv_cmd} exec bundle" : 'bundle'
+            rbenv_install_bundler ? "#{rbenv_cmd} exec bundle" : "bundle"
           }
 
           _cset(:rbenv_install_dependencies, true)
@@ -43,9 +50,9 @@ module Capistrano
           task(:setup, :except => { :no_release => true }) {
             dependencies if rbenv_install_dependencies
             update
-            configure
+            configure if rbenv_setup_shell
             build
-            setup_bundler if rbenv_use_bundler
+            setup_bundler if rbenv_install_bundler
           }
           after 'deploy:setup', 'rbenv:setup'
 
@@ -93,16 +100,23 @@ module Capistrano
             set(:default_environment, env)
           end
 
-          _cset(:rbenv_define_default_environment, true)
+          _cset(:rbenv_setup_default_environment) {
+            if variables.key?(:rbenv_define_default_environment)
+              logger.info(":rbenv_define_default_environment has been deprecated. use :rbenv_setup_default_environment instead.")
+              fetch(:rbenv_define_default_environment, true)
+            else
+              true
+            end
+          }
           # workaround for `multistage` of capistrano-ext.
           # https://github.com/yyuu/capistrano-rbenv/pull/5
           if top.namespaces.key?(:multistage)
             after "multistage:ensure" do
-              setup_default_environment if rbenv_define_default_environment
+              setup_default_environment if rbenv_setup_default_environment
             end
           else
             on :start do
-              setup_default_environment if rbenv_define_default_environment
+              setup_default_environment if rbenv_setup_default_environment
             end
           end
 
@@ -178,18 +192,24 @@ module Capistrano
             end
           end
 
+          _cset(:rbenv_setup_shell) {
+            if variables.key?(:rbenv_use_configure)
+              logger.info(":rbenv_use_configure has been deprecated. please use :rbenv_setup_shell instead.")
+              fetch(:rbenv_use_configure, true)
+            else
+              true
+            end
+          }
           _cset(:rbenv_configure_signature, '##rbenv:configure')
           task(:configure, :except => { :no_release => true }) {
-            if fetch(:rbenv_use_configure, true)
-              begin
-                script_file = capture("mktemp /tmp/rbenv.XXXXXXXXXX").strip
-                top.put(rbenv_configure_script, script_file)
-                [ rbenv_configure_files ].flatten.each do |file|
-                  update_config(script_file, file)
-                end
-              ensure
-                run("rm -f #{script_file.dump}") rescue nil
+            begin
+              script_file = capture("mktemp /tmp/rbenv.XXXXXXXXXX").strip
+              top.put(rbenv_configure_script, script_file)
+              [ rbenv_configure_files ].flatten.each do |file|
+                update_config(script_file, file)
               end
+            ensure
+              run("rm -f #{script_file.dump}") rescue nil
             end
           }
 

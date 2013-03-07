@@ -36,12 +36,12 @@ Following options are available to manage your rbenv.
  * `:rbenv_repository` - repository URL of rbenv.
  * `:rbenv_ruby_dependencies` - dependency packages.
  * `:rbenv_ruby_version` - the ruby version to install. install `1.9.3-p194` by default.
- * `:rbenv_use_bundler` - controls whether installing bundler or not. `true` by default.
- * `:rbenv_use_configure` - configure rbenv in your shell config or not. `true` by default. users who are using Chef/Puppet may prefer setting this value `false`.
+ * `:rbenv_install_bundler` - controls whether installing bundler or not. `true` by default.
+ * `:rbenv_install_dependencies` - controls whether installing dependencies or not. `true` by default.
+ * `:rbenv_setup_shell` - setup rbenv in your shell config or not. `true` by default. users who are using Chef/Puppet may prefer setting this value `false`.
+ * `:rbenv_setup_default_environment` - setup `RBENV_ROOT` and update `PATH` to use rbenv over capistrano. `true` by default.
  * `:rbenv_configure_files` - list of shell configuration files to be configured for rbenv. by default, guessing from user's `$SHELL` and `$HOME`.
  * `:rbenv_configure_basenames` - advanced option for `:rbenv_configure_files`. list of filename of your shell configuration files if you don't like the default value of `:rbenv_configure_files`.
- * `:rbenv_install_dependencies` - controls whether installing dependencies or not. `true` by default.
- * `:rbenv_define_default_environment` - define `RBENV_ROOT` and update `PATH` to use rbenv over capistrano. `true` by default.
 
 ## Contributing
 
