@@ -328,8 +328,16 @@ module Capistrano
             capture("#{rbenv_cmd} versions --bare").split(/(?:\r?\n)+/)
           end
 
+          _cset(:rbenv_install_ruby_threads) {
+            capture("cat /proc/cpuinfo | cut -f1 | grep processor | wc -l").to_i rescue 1
+          }
+          # create build processes as many as processor count
+          _cset(:rbenv_make_options) { "-j #{rbenv_install_ruby_threads}" }
           def install(version, options={})
-            run("#{rbenv_cmd} install #{version.dump}")
+            execute = []
+            execute << "export MAKE_OPTS=#{rbenv_make_options.dump}" if rbenv_make_options
+            execute << "#{rbenv_cmd} install #{version.dump}"
+            run(execute.join(" && "), options)
           end
 
           def uninstall(version, options={})
