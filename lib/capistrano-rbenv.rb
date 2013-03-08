@@ -120,7 +120,7 @@ module Capistrano
               true
             end
           }
-          # workaround for `multistage` of capistrano-ext.
+          # workaround for loading `capistrano-rbenv` later than `capistrano/ext/multistage`.
           # https://github.com/yyuu/capistrano-rbenv/pull/5
           if top.namespaces.key?(:multistage)
             after "multistage:ensure" do
@@ -128,7 +128,15 @@ module Capistrano
             end
           else
             on :start do
-              _setup_default_environment if rbenv_setup_default_environment
+              if top.namespaces.key?(:multistage)
+                # workaround for loading `capistrano-rbenv` earlier than `capistrano/ext/multistage`.
+                # https://github.com/yyuu/capistrano-rbenv/issues/7
+                after "multistage:ensure" do
+                  _setup_default_environment if rbenv_setup_default_environment
+                end
+              else
+                _setup_default_environment if rbenv_setup_default_environment
+              end
             end
           end
 
