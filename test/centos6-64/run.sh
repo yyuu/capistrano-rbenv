@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
-vagrant up
-cap test_all
-vagrant destroy -f
+bundle exec vagrant up
+bundle exec cap test_all
+bundle exec vagrant destroy -f
 
 # vim:set ft=sh :
