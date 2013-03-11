@@ -338,6 +338,10 @@ module Capistrano
             capture("#{rbenv_cmd} versions --bare", options).split(/(?:\r?\n)+/)
           end
 
+          def available_versions(options={})
+            capture("#{rbenv_cmd} install --complete", options).split(/(?:\r?\n)+/)
+          end
+
           _cset(:rbenv_install_ruby_threads) {
             capture("cat /proc/cpuinfo | cut -f1 | grep processor | wc -l").to_i rescue 1
           }
