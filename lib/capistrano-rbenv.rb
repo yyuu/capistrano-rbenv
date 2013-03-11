@@ -272,6 +272,7 @@ module Capistrano
           _cset(:rbenv_ruby_versions) { rbenv.versions }
           desc("Build ruby within rbenv.")
           task(:build, :except => { :no_release => true }) {
+            reset!(:rbenv_ruby_versions)
             ruby = fetch(:rbenv_ruby_cmd, "ruby")
             if rbenv_ruby_version != "system" and not rbenv_ruby_versions.include?(rbenv_ruby_version)
               rbenv.install(rbenv_ruby_version)
