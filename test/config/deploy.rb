@@ -17,7 +17,7 @@ role :web, "192.168.33.10"
 role :app, "192.168.33.10"
 role :db,  "192.168.33.10", :primary => true
 
-$LOAD_PATH.push("../../lib")
+$LOAD_PATH.push(File.expand_path("../../lib", File.dirname(__FILE__)))
 require "capistrano-rbenv"
 
 namespace(:test_all) {
