@@ -30,10 +30,10 @@ module Capistrano
           _cset(:rbenv_plugins_path) {
             File.join(rbenv_path, 'plugins')
           }
-          _cset(:rbenv_ruby_version, "1.9.3-p327")
+          _cset(:rbenv_ruby_version, "1.9.3-p392")
 
           _cset(:rbenv_install_bundler) {
-            if variables.key?(:rbenv_use_bundler)
+            if exists?(:rbenv_use_bundler)
               logger.info(":rbenv_use_bundler has been deprecated. use :rbenv_install_bundler instead.")
               fetch(:rbenv_use_bundler, true)
             else
@@ -113,7 +113,7 @@ module Capistrano
           end
 
           _cset(:rbenv_setup_default_environment) {
-            if variables.key?(:rbenv_define_default_environment)
+            if exists?(:rbenv_define_default_environment)
               logger.info(":rbenv_define_default_environment has been deprecated. use :rbenv_setup_default_environment instead.")
               fetch(:rbenv_define_default_environment, true)
             else
@@ -213,7 +213,7 @@ module Capistrano
           end
 
           _cset(:rbenv_setup_shell) {
-            if variables.key?(:rbenv_use_configure)
+            if exists?(:rbenv_use_configure)
               logger.info(":rbenv_use_configure has been deprecated. please use :rbenv_setup_shell instead.")
               fetch(:rbenv_use_configure, true)
             else
