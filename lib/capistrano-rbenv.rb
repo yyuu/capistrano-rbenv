@@ -74,13 +74,25 @@ module Capistrano
 
           desc("Setup rbenv.")
           task(:setup, :except => { :no_release => true }) {
-            dependencies if rbenv_install_dependencies
-            update
+            #
+            # skip installation if the requested version has been installed.
+            #
+            begin
+              installed = rbenv_ruby_versions.include?(rbenv_ruby_version)
+            rescue
+              installed = false
+            end
+            _setup unless installed
             configure if rbenv_setup_shell
-            build
             setup_bundler if rbenv_install_bundler
           }
-          after 'deploy:setup', 'rbenv:setup'
+          after "deploy:setup", "rbenv:setup"
+
+          task(:_setup, :except => { :no_release => true }) {
+            dependencies if rbenv_install_dependencies
+            update
+            build
+          }
 
           def _update_repository(destination, options={})
             configuration = Capistrano::Configuration.new()
