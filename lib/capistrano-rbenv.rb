@@ -278,7 +278,7 @@ module Capistrano
               rbenv.install(rbenv_ruby_version)
             end
             rbenv.exec("#{ruby} --version") # check if ruby is executable
-            rbenv.global(rbenv_ruby_version)
+            rbenv.global(rbenv_ruby_version) if fetch(:rbenv_setup_global_version, true)
           }
 
           _cset(:rbenv_bundler_gem, 'bundler')
