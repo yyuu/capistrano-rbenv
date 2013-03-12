@@ -18,7 +18,7 @@ module Capistrano
             File.join(rbenv_bin_path, "rbenv")
           }
           _cset(:rbenv_cmd) {
-            "env RBENV_VERSION=#{rbenv_ruby_version.dump} #{rbenv_bin}"
+            "env RBENV_ROOT=#{rbenv_path.dump} RBENV_VERSION=#{rbenv_ruby_version.dump} #{rbenv_bin}"
           }
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
           _cset(:rbenv_branch, 'master')
