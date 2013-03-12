@@ -348,8 +348,10 @@ module Capistrano
           }
           # create build processes as many as processor count
           _cset(:rbenv_make_options) { "-j #{rbenv_install_ruby_threads}" }
+          _cset(:rbenv_configure_options, nil)
           def install(version, options={})
             execute = []
+            execute << "export CONFIGURE_OPTS=#{rbenv_configure_options.dump}" if rbenv_configure_options
             execute << "export MAKE_OPTS=#{rbenv_make_options.dump}" if rbenv_make_options
             execute << "#{rbenv_cmd} install #{version.dump}"
             run(execute.join(" && "), options)
