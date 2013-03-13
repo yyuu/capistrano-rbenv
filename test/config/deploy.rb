@@ -8,9 +8,7 @@ set :scm, :none
 set :use_sudo, false
 set :user, "vagrant"
 set :password, "vagrant"
-set :ssh_options do
-  {:user_known_hosts_file => "/dev/null"}
-end
+set :ssh_options, {:user_known_hosts_file => "/dev/null"}
 
 role :web, "192.168.33.10"
 role :app, "192.168.33.10"
