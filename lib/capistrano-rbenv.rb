@@ -17,8 +17,22 @@ module Capistrano
           _cset(:rbenv_bin) {
             File.join(rbenv_bin_path, "rbenv")
           }
-          _cset(:rbenv_cmd) {
-            "env RBENV_VERSION=#{rbenv_ruby_version.dump} #{rbenv_bin}"
+          def rbenv_command(options={})
+            environment = rbenv_environment.merge(options.fetch(:env, {}))
+            environment["RBENV_VERSION"] = options[:version] if options.key?(:version)
+            if environment.empty?
+              rbenv_bin
+            else
+              env = (["env"] + environment.map { |k, v| "#{k}=#{v.dump}" }).join(" ")
+              "#{env} #{rbenv_bin}"
+            end
+          end
+          _cset(:rbenv_cmd) { rbenv_command(:version => rbenv_ruby_version) } # this declares RBENV_VERSION.
+          _cset(:rbenv_environment) {
+            {
+              "RBENV_ROOT" => rbenv_path,
+              "PATH" => [ rbenv_shims_path, rbenv_bin_path, "$PATH" ].join(":"),
+            }
           }
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
           _cset(:rbenv_branch, 'master')
@@ -30,10 +44,10 @@ module Capistrano
           _cset(:rbenv_plugins_path) {
             File.join(rbenv_path, 'plugins')
           }
-          _cset(:rbenv_ruby_version, "1.9.3-p327")
+          _cset(:rbenv_ruby_version, "1.9.3-p392")
 
           _cset(:rbenv_install_bundler) {
-            if variables.key?(:rbenv_use_bundler)
+            if exists?(:rbenv_use_bundler)
               logger.info(":rbenv_use_bundler has been deprecated. use :rbenv_install_bundler instead.")
               fetch(:rbenv_use_bundler, true)
             else
@@ -60,13 +74,26 @@ module Capistrano
 
           desc("Setup rbenv.")
           task(:setup, :except => { :no_release => true }) {
-            dependencies if rbenv_install_dependencies
-            update
+            #
+            # skip installation if the requested version has been installed.
+            #
+            begin
+              installed = rbenv_ruby_versions.include?(rbenv_ruby_version)
+            rescue
+              installed = false
+            end
+            _setup unless installed
             configure if rbenv_setup_shell
-            build
+            rbenv.global(rbenv_ruby_version) if fetch(:rbenv_setup_global_version, true)
             setup_bundler if rbenv_install_bundler
           }
-          after 'deploy:setup', 'rbenv:setup'
+          after "deploy:setup", "rbenv:setup"
+
+          task(:_setup, :except => { :no_release => true }) {
+            dependencies if rbenv_install_dependencies
+            update
+            build
+          }
 
           def _update_repository(destination, options={})
             configuration = Capistrano::Configuration.new()
@@ -106,21 +133,18 @@ module Capistrano
           }
 
           def _setup_default_environment
-            env = fetch(:default_environment, {}).dup
-            env["RBENV_ROOT"] = rbenv_path
-            env["PATH"] = [ rbenv_shims_path, rbenv_bin_path, env.fetch("PATH", "$PATH") ].join(":")
-            set(:default_environment, env)
+            set(:default_environment, default_environment.merge(rbenv_environment))
           end
 
           _cset(:rbenv_setup_default_environment) {
-            if variables.key?(:rbenv_define_default_environment)
+            if exists?(:rbenv_define_default_environment)
               logger.info(":rbenv_define_default_environment has been deprecated. use :rbenv_setup_default_environment instead.")
               fetch(:rbenv_define_default_environment, true)
             else
               true
             end
           }
-          # workaround for `multistage` of capistrano-ext.
+          # workaround for loading `capistrano-rbenv` later than `capistrano/ext/multistage`.
           # https://github.com/yyuu/capistrano-rbenv/pull/5
           if top.namespaces.key?(:multistage)
             after "multistage:ensure" do
@@ -128,7 +152,15 @@ module Capistrano
             end
           else
             on :start do
-              _setup_default_environment if rbenv_setup_default_environment
+              if top.namespaces.key?(:multistage)
+                # workaround for loading `capistrano-rbenv` earlier than `capistrano/ext/multistage`.
+                # https://github.com/yyuu/capistrano-rbenv/issues/7
+                after "multistage:ensure" do
+                  _setup_default_environment if rbenv_setup_default_environment
+                end
+              else
+                _setup_default_environment if rbenv_setup_default_environment
+              end
             end
           end
 
@@ -205,7 +237,7 @@ module Capistrano
           end
 
           _cset(:rbenv_setup_shell) {
-            if variables.key?(:rbenv_use_configure)
+            if exists?(:rbenv_use_configure)
               logger.info(":rbenv_use_configure has been deprecated. please use :rbenv_setup_shell instead.")
               fetch(:rbenv_use_configure, true)
             else
@@ -264,70 +296,71 @@ module Capistrano
           _cset(:rbenv_ruby_versions) { rbenv.versions }
           desc("Build ruby within rbenv.")
           task(:build, :except => { :no_release => true }) {
+            reset!(:rbenv_ruby_versions)
             ruby = fetch(:rbenv_ruby_cmd, "ruby")
             if rbenv_ruby_version != "system" and not rbenv_ruby_versions.include?(rbenv_ruby_version)
               rbenv.install(rbenv_ruby_version)
             end
             rbenv.exec("#{ruby} --version") # check if ruby is executable
-            rbenv.global(rbenv_ruby_version)
           }
 
           _cset(:rbenv_bundler_gem, 'bundler')
           task(:setup_bundler, :except => { :no_release => true }) {
             gem = "#{rbenv_cmd} exec gem"
-            if v = fetch(:rbenv_bundler_version, nil)
-              q = "-n #{rbenv_bundler_gem} -v #{v}"
-              f = "fgrep #{rbenv_bundler_gem} | fgrep #{v}"
-              i = "-v #{v} #{rbenv_bundler_gem}"
+            if version = fetch(:rbenv_bundler_version, nil)
+              query_args = "-i -n #{rbenv_bundler_gem.dump} -v #{version.dump}"
+              install_args = "-v #{version.dump} #{rbenv_bundler_gem.dump}"
             else
-              q = "-n #{rbenv_bundler_gem}"
-              f = "fgrep #{rbenv_bundler_gem}"
-              i = "#{rbenv_bundler_gem}"
+              query_args = "-i -n #{rbenv_bundler_gem.dump}"
+              install_args = "#{rbenv_bundler_gem.dump}"
             end
-            run("unset -v GEM_HOME; #{gem} query #{q} 2>/dev/null | #{f} || #{gem} install -q #{i}")
+            run("unset -v GEM_HOME; #{gem} query #{query_args} 2>/dev/null || #{gem} install -q #{install_args}")
             rbenv.rehash
             run("#{bundle_cmd} version")
           }
 
           # call `rbenv rehash` to update shims.
           def rehash(options={})
-            run("#{rbenv_cmd} rehash", options)
+            invoke_command("#{rbenv_command} rehash", options)
           end
 
           def global(version, options={})
-            run("#{rbenv_cmd} global #{version.dump}", options)
+            invoke_command("#{rbenv_command} global #{version.dump}", options)
           end
 
           def local(version, options={})
             path = options.delete(:path)
-            if path
-              run("cd #{path.dump} && #{rbenv_cmd} local #{version.dump}", options)
-            else
-              run("#{rbenv_cmd} local #{version.dump}", options)
-            end
+            execute = []
+            execute << "cd #{path.dump}" if path
+            execute << "#{rbenv_command} local #{version.dump}"
+            invoke_command(execute.join(" && "), options)
           end
 
           def which(command, options={})
             path = options.delete(:path)
-            if path
-              capture("cd #{path.dump} && #{rbenv_cmd} which #{command.dump}", options).strip
-            else
-              capture("#{rbenv_cmd} which #{command.dump}", options).strip
-            end
+            version = ( options.delete(:version) || rbenv_ruby_version )
+            execute = []
+            execute << "cd #{path.dump}" if path
+            execute << "#{rbenv_command(:version => version)} which #{command.dump}"
+            capture(execute.join(" && "), options).strip
           end
 
           def exec(command, options={})
             # users of rbenv.exec must sanitize their command line.
             path = options.delete(:path)
-            if path
-              run("cd #{path.dump} && #{rbenv_cmd} exec #{command}", options)
-            else
-              run("#{rbenv_cmd} exec #{command}", options)
-            end
+            version = ( options.delete(:version) || rbenv_ruby_version )
+            execute = []
+            execute << "cd #{path.dump}" if path
+            execute << "#{rbenv_command(:version => version)} exec #{command}"
+            invoke_command(execute.join(" && "), options)
           end
 
           def versions(options={})
-            capture("#{rbenv_cmd} versions --bare", options).split(/(?:\r?\n)+/)
+            capture("#{rbenv_command} versions --bare", options).split(/(?:\r?\n)+/)
+          end
+
+          def available_versions(options={})
+            capture("#{rbenv_command} install --complete", options).split(/(?:\r?\n)+/)
           end
 
           _cset(:rbenv_install_ruby_threads) {
@@ -335,15 +368,16 @@ module Capistrano
           }
           # create build processes as many as processor count
           _cset(:rbenv_make_options) { "-j #{rbenv_install_ruby_threads}" }
+          _cset(:rbenv_configure_options, nil)
           def install(version, options={})
-            execute = []
-            execute << "export MAKE_OPTS=#{rbenv_make_options.dump}" if rbenv_make_options
-            execute << "#{rbenv_cmd} install #{version.dump}"
-            run(execute.join(" && "), options)
+            environment = {}
+            environment["CONFIGURE_OPTS"] = rbenv_configure_options.to_s if rbenv_configure_options
+            environment["MAKE_OPTS"] = rbenv_make_options.to_s if rbenv_make_options
+            invoke_command("#{rbenv_command(:env => environment)} install #{version.dump}", options)
           end
 
           def uninstall(version, options={})
-            run("#{rbenv_cmd} uninstall -f #{version.dump}", options)
+            invoke_command("#{rbenv_command} uninstall -f #{version.dump}", options)
           end
         }
       }
