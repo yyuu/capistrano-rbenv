@@ -28,12 +28,10 @@ module Capistrano
             end
           end
           _cset(:rbenv_cmd) { rbenv_command(:version => rbenv_ruby_version) } # this declares RBENV_VERSION.
-          _cset(:rbenv_environment) {
-            {
-              "RBENV_ROOT" => rbenv_path,
-              "PATH" => [ rbenv_shims_path, rbenv_bin_path, "$PATH" ].join(":"),
-            }
-          }
+          _cset(:rbenv_environment) {{
+            "RBENV_ROOT" => rbenv_path,
+            "PATH" => [ rbenv_shims_path, rbenv_bin_path, "$PATH" ].join(":"),
+          }}
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
           _cset(:rbenv_branch, 'master')
 
@@ -132,10 +130,6 @@ module Capistrano
             plugins.update
           }
 
-          def _setup_default_environment
-            set(:default_environment, default_environment.merge(rbenv_environment))
-          end
-
           _cset(:rbenv_setup_default_environment) {
             if exists?(:rbenv_define_default_environment)
               logger.info(":rbenv_define_default_environment has been deprecated. use :rbenv_setup_default_environment instead.")
@@ -147,22 +141,24 @@ module Capistrano
           # workaround for loading `capistrano-rbenv` later than `capistrano/ext/multistage`.
           # https://github.com/yyuu/capistrano-rbenv/pull/5
           if top.namespaces.key?(:multistage)
-            after "multistage:ensure" do
-              _setup_default_environment if rbenv_setup_default_environment
-            end
+            after "multistage:ensure", "rbenv:setup_default_environment"
           else
             on :start do
               if top.namespaces.key?(:multistage)
                 # workaround for loading `capistrano-rbenv` earlier than `capistrano/ext/multistage`.
                 # https://github.com/yyuu/capistrano-rbenv/issues/7
-                after "multistage:ensure" do
-                  _setup_default_environment if rbenv_setup_default_environment
-                end
+                after "multistage:ensure", "rbenv:setup_default_environment"
               else
-                _setup_default_environment if rbenv_setup_default_environment
+                setup_default_environment
               end
             end
           end
+
+          task(:setup_default_environment, :except => { :no_release => true }) {
+            if rbenv_setup_default_environment
+              set(:default_environment, default_environment.merge(rbenv_environment))
+            end
+          }
 
           desc("Purge rbenv.")
           task(:purge, :except => { :no_release => true }) {
