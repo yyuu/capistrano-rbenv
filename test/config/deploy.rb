@@ -9,8 +9,7 @@ set :use_sudo, false
 set :user, "vagrant"
 set :password, "vagrant"
 set :ssh_options do
-  run_locally("rm -f known_hosts")
-  {:user_known_hosts_file => "known_hosts"}
+  {:user_known_hosts_file => "/dev/null"}
 end
 
 role :web, "192.168.33.10"
