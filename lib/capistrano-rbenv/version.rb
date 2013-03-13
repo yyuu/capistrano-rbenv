@@ -1,5 +1,5 @@
 module Capistrano
   module RbEnv
-    VERSION = "1.0.0rc3git"
+    VERSION = "1.0.0"
   end
 end
