@@ -75,6 +75,7 @@ module Capistrano
             #
             # skip installation if the requested version has been installed.
             #
+            reset!(:rbenv_ruby_versions)
             begin
               installed = rbenv_ruby_versions.include?(rbenv_ruby_version)
             rescue
@@ -292,7 +293,7 @@ module Capistrano
           _cset(:rbenv_ruby_versions) { rbenv.versions }
           desc("Build ruby within rbenv.")
           task(:build, :except => { :no_release => true }) {
-            reset!(:rbenv_ruby_versions)
+#           reset!(:rbenv_ruby_versions)
             ruby = fetch(:rbenv_ruby_cmd, "ruby")
             if rbenv_ruby_version != "system" and not rbenv_ruby_versions.include?(rbenv_ruby_version)
               rbenv.install(rbenv_ruby_version)
@@ -324,31 +325,35 @@ module Capistrano
             invoke_command("#{rbenv_command} global #{version.dump}", options)
           end
 
-          def local(version, options={})
+          def invoke_command_with_path(cmdline, options={})
             path = options.delete(:path)
-            execute = []
-            execute << "cd #{path.dump}" if path
-            execute << "#{rbenv_command} local #{version.dump}"
-            invoke_command(execute.join(" && "), options)
+            if path
+              chdir = "cd #{path.dump}"
+              via = options.delete(:via)
+              # as of Capistrano 2.14.2, `sudo()` cannot handle multiple command correctly.
+              if via == :sudo
+                invoke_command("#{chdir} && #{sudo} #{cmdline}", options)
+              else
+                invoke_command("#{chdir} && #{cmdline}", options.merge(:via => via))
+              end
+            else
+              invoke_command(cmdline, options)
+            end
+          end
+
+          def local(version, options={})
+            invoke_command_with_path("#{rbenv_command} local #{version.dump}", options)
           end
 
           def which(command, options={})
-            path = options.delete(:path)
             version = ( options.delete(:version) || rbenv_ruby_version )
-            execute = []
-            execute << "cd #{path.dump}" if path
-            execute << "#{rbenv_command(:version => version)} which #{command.dump}"
-            capture(execute.join(" && "), options).strip
+            invoke_command_with_path("#{rbenv_command(:version => version)} which #{command.dump}", options)
           end
 
           def exec(command, options={})
             # users of rbenv.exec must sanitize their command line.
-            path = options.delete(:path)
             version = ( options.delete(:version) || rbenv_ruby_version )
-            execute = []
-            execute << "cd #{path.dump}" if path
-            execute << "#{rbenv_command(:version => version)} exec #{command}"
-            invoke_command(execute.join(" && "), options)
+            invoke_command_with_path("#{rbenv_command(:version => version)} exec #{command}", options)
           end
 
           def versions(options={})
