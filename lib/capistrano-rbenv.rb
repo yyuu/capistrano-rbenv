@@ -155,9 +155,20 @@ module Capistrano
             end
           end
 
+          _cset(:rbenv_environment_join_keys, %w(DYLD_LIBRARY_PATH LD_LIBRARY_PATH MANPATH PATH))
+          def _merge_environment(x, y)
+            x.merge(y) { |key, x_val, y_val|
+              if rbenv_environment_join_keys.key?(key)
+                [ y_val, x_val ].join(":")
+              else
+                y_val
+              end
+            }
+          end
+
           task(:setup_default_environment, :except => { :no_release => true }) {
             if rbenv_setup_default_environment
-              set(:default_environment, default_environment.merge(rbenv_environment))
+              set(:default_environment, _merge_environment(default_environment, rbenv_environment))
             end
           }
 
