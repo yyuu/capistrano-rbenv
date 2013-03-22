@@ -18,7 +18,7 @@ module Capistrano
             File.join(rbenv_bin_path, "rbenv")
           }
           def rbenv_command(options={})
-            environment = rbenv_environment.merge(options.fetch(:env, {}))
+            environment = _merge_environment(rbenv_environment, options.fetch(:env, {}))
             environment["RBENV_VERSION"] = options[:version] if options.key?(:version)
             if environment.empty?
               rbenv_bin
@@ -159,7 +159,7 @@ module Capistrano
           def _merge_environment(x, y)
             x.merge(y) { |key, x_val, y_val|
               if rbenv_environment_join_keys.key?(key)
-                [ y_val, x_val ].join(":")
+                ( y_val.split(":") + x_val.split(":") ).uniq.join(":")
               else
                 y_val
               end
