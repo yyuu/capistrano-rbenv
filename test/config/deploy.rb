@@ -56,10 +56,10 @@ namespace(:test_default) {
     rbenv.exec("ruby -e 'exit(Dir.pwd==%{/}?0:1)'", :path => "/")
   }
 
-# task(:test_rbenv_exec_ruby_via_sudo_with_path) {
-#   # capistrano does not provide safer way to invoke multiple commands via sudo.
-#   rbenv.exec("ruby -e 'exit(Dir.pwd==%{/}&&Process.uid==0?0:1'", :path => "/", :via => :sudo )
-# }
+  task(:test_rbenv_exec_ruby_via_sudo_with_path) {
+    # capistrano does not provide safer way to invoke multiple commands via sudo.
+    rbenv.exec("ruby -e 'exit(Dir.pwd==%{/}&&Process.uid==0?0:1)'", :path => "/", :via => :sudo )
+  }
 
 ## via sudo
   task(:test_rbenv_exec_via_sudo) {

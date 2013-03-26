@@ -1,5 +1,6 @@
 require "capistrano-rbenv/version"
 require "capistrano/configuration"
+require "capistrano/configuration/resources/platform_resources"
 require "capistrano/recipes/deploy/scm"
 
 module Capistrano
@@ -18,7 +19,7 @@ module Capistrano
             File.join(rbenv_bin_path, "rbenv")
           }
           def rbenv_command(options={})
-            environment = rbenv_environment.merge(options.fetch(:env, {}))
+            environment = _merge_environment(rbenv_environment, options.fetch(:env, {}))
             environment["RBENV_VERSION"] = options[:version] if options.key?(:version)
             if environment.empty?
               rbenv_bin
@@ -28,12 +29,10 @@ module Capistrano
             end
           end
           _cset(:rbenv_cmd) { rbenv_command(:version => rbenv_ruby_version) } # this declares RBENV_VERSION.
-          _cset(:rbenv_environment) {
-            {
-              "RBENV_ROOT" => rbenv_path,
-              "PATH" => [ rbenv_shims_path, rbenv_bin_path, "$PATH" ].join(":"),
-            }
-          }
+          _cset(:rbenv_environment) {{
+            "RBENV_ROOT" => rbenv_path,
+            "PATH" => [ rbenv_shims_path, rbenv_bin_path, "$PATH" ].join(":"),
+          }}
           _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
           _cset(:rbenv_branch, 'master')
 
@@ -62,13 +61,7 @@ module Capistrano
             if rbenv_ruby_dependencies.empty?
               false
             else
-              status = case rbenv_platform
-                when /(debian|ubuntu)/i
-                  capture("dpkg-query -s #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")} 1>/dev/null 2>&1 || echo required")
-                when /redhat/i
-                  capture("rpm -qi #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")} 1>/dev/null 2>&1 || echo required")
-                end
-              true and (/required/i =~ status)
+              not(platform.packages.installed?(rbenv_ruby_dependencies))
             end
           }
 
@@ -77,6 +70,7 @@ module Capistrano
             #
             # skip installation if the requested version has been installed.
             #
+            reset!(:rbenv_ruby_versions)
             begin
               installed = rbenv_ruby_versions.include?(rbenv_ruby_version)
             rescue
@@ -132,10 +126,6 @@ module Capistrano
             plugins.update
           }
 
-          def _setup_default_environment
-            set(:default_environment, default_environment.merge(rbenv_environment))
-          end
-
           _cset(:rbenv_setup_default_environment) {
             if exists?(:rbenv_define_default_environment)
               logger.info(":rbenv_define_default_environment has been deprecated. use :rbenv_setup_default_environment instead.")
@@ -147,22 +137,35 @@ module Capistrano
           # workaround for loading `capistrano-rbenv` later than `capistrano/ext/multistage`.
           # https://github.com/yyuu/capistrano-rbenv/pull/5
           if top.namespaces.key?(:multistage)
-            after "multistage:ensure" do
-              _setup_default_environment if rbenv_setup_default_environment
-            end
+            after "multistage:ensure", "rbenv:setup_default_environment"
           else
             on :start do
               if top.namespaces.key?(:multistage)
                 # workaround for loading `capistrano-rbenv` earlier than `capistrano/ext/multistage`.
                 # https://github.com/yyuu/capistrano-rbenv/issues/7
-                after "multistage:ensure" do
-                  _setup_default_environment if rbenv_setup_default_environment
-                end
+                after "multistage:ensure", "rbenv:setup_default_environment"
               else
-                _setup_default_environment if rbenv_setup_default_environment
+                setup_default_environment
               end
             end
           end
+
+          _cset(:rbenv_environment_join_keys, %w(DYLD_LIBRARY_PATH LD_LIBRARY_PATH MANPATH PATH))
+          def _merge_environment(x, y)
+            x.merge(y) { |key, x_val, y_val|
+              if rbenv_environment_join_keys.key?(key)
+                ( y_val.split(":") + x_val.split(":") ).uniq.join(":")
+              else
+                y_val
+              end
+            }
+          end
+
+          task(:setup_default_environment, :except => { :no_release => true }) {
+            if rbenv_setup_default_environment
+              set(:default_environment, _merge_environment(default_environment, rbenv_environment))
+            end
+          }
 
           desc("Purge rbenv.")
           task(:purge, :except => { :no_release => true }) {
@@ -257,46 +260,25 @@ module Capistrano
             end
           }
 
-          _cset(:rbenv_platform) {
-            capture((<<-EOS).gsub(/\s+/, ' ')).strip
-              if test -f /etc/debian_version; then
-                if test -f /etc/lsb-release && grep -i -q DISTRIB_ID=Ubuntu /etc/lsb-release; then
-                  echo ubuntu;
-                else
-                  echo debian;
-                fi;
-              elif test -f /etc/redhat-release; then
-                echo redhat;
-              else
-                echo unknown;
-              fi;
-            EOS
-          }
+          _cset(:rbenv_platform) { fetch(:platform_identifier) }
           _cset(:rbenv_ruby_dependencies) {
-            case rbenv_platform
-            when /(debian|ubuntu)/i
+            case rbenv_platform.to_sym
+            when :debian, :ubuntu
               %w(git-core build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
-            when /redhat/i
+            when :redhat, :centos
               %w(git-core autoconf glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
             else
               []
             end
           }
           task(:dependencies, :except => { :no_release => true }) {
-            unless rbenv_ruby_dependencies.empty?
-              case rbenv_platform
-              when /(debian|ubuntu)/i
-                run("#{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")}")
-              when /redhat/i
-                run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")}")
-              end
-            end
+            platform.packages.install(rbenv_ruby_dependencies)
           }
 
           _cset(:rbenv_ruby_versions) { rbenv.versions }
           desc("Build ruby within rbenv.")
           task(:build, :except => { :no_release => true }) {
-            reset!(:rbenv_ruby_versions)
+#           reset!(:rbenv_ruby_versions)
             ruby = fetch(:rbenv_ruby_cmd, "ruby")
             if rbenv_ruby_version != "system" and not rbenv_ruby_versions.include?(rbenv_ruby_version)
               rbenv.install(rbenv_ruby_version)
@@ -328,31 +310,35 @@ module Capistrano
             invoke_command("#{rbenv_command} global #{version.dump}", options)
           end
 
-          def local(version, options={})
+          def invoke_command_with_path(cmdline, options={})
             path = options.delete(:path)
-            execute = []
-            execute << "cd #{path.dump}" if path
-            execute << "#{rbenv_command} local #{version.dump}"
-            invoke_command(execute.join(" && "), options)
+            if path
+              chdir = "cd #{path.dump}"
+              via = options.delete(:via)
+              # as of Capistrano 2.14.2, `sudo()` cannot handle multiple command correctly.
+              if via == :sudo
+                invoke_command("#{chdir} && #{sudo} #{cmdline}", options)
+              else
+                invoke_command("#{chdir} && #{cmdline}", options.merge(:via => via))
+              end
+            else
+              invoke_command(cmdline, options)
+            end
+          end
+
+          def local(version, options={})
+            invoke_command_with_path("#{rbenv_command} local #{version.dump}", options)
           end
 
           def which(command, options={})
-            path = options.delete(:path)
             version = ( options.delete(:version) || rbenv_ruby_version )
-            execute = []
-            execute << "cd #{path.dump}" if path
-            execute << "#{rbenv_command(:version => version)} which #{command.dump}"
-            capture(execute.join(" && "), options).strip
+            invoke_command_with_path("#{rbenv_command(:version => version)} which #{command.dump}", options)
           end
 
           def exec(command, options={})
             # users of rbenv.exec must sanitize their command line.
-            path = options.delete(:path)
             version = ( options.delete(:version) || rbenv_ruby_version )
-            execute = []
-            execute << "cd #{path.dump}" if path
-            execute << "#{rbenv_command(:version => version)} exec #{command}"
-            invoke_command(execute.join(" && "), options)
+            invoke_command_with_path("#{rbenv_command(:version => version)} exec #{command}", options)
           end
 
           def versions(options={})
