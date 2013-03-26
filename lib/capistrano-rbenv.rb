@@ -1,5 +1,6 @@
 require "capistrano-rbenv/version"
 require "capistrano/configuration"
+require "capistrano/configuration/resources/platform_resources"
 require "capistrano/recipes/deploy/scm"
 
 module Capistrano
@@ -60,13 +61,7 @@ module Capistrano
             if rbenv_ruby_dependencies.empty?
               false
             else
-              status = case rbenv_platform
-                when /(debian|ubuntu)/i
-                  capture("dpkg-query -s #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")} 1>/dev/null 2>&1 || echo required")
-                when /redhat/i
-                  capture("rpm -qi #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")} 1>/dev/null 2>&1 || echo required")
-                end
-              true and (/required/i =~ status)
+              not(platform.packages.installed?(rbenv_ruby_dependencies))
             end
           }
 
@@ -265,40 +260,19 @@ module Capistrano
             end
           }
 
-          _cset(:rbenv_platform) {
-            capture((<<-EOS).gsub(/\s+/, ' ')).strip
-              if test -f /etc/debian_version; then
-                if test -f /etc/lsb-release && grep -i -q DISTRIB_ID=Ubuntu /etc/lsb-release; then
-                  echo ubuntu;
-                else
-                  echo debian;
-                fi;
-              elif test -f /etc/redhat-release; then
-                echo redhat;
-              else
-                echo unknown;
-              fi;
-            EOS
-          }
+          _cset(:rbenv_platform) { fetch(:platform_identifier) }
           _cset(:rbenv_ruby_dependencies) {
-            case rbenv_platform
-            when /(debian|ubuntu)/i
+            case rbenv_platform.to_sym
+            when :debian, :ubuntu
               %w(git-core build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
-            when /redhat/i
+            when :redhat, :centos
               %w(git-core autoconf glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
             else
               []
             end
           }
           task(:dependencies, :except => { :no_release => true }) {
-            unless rbenv_ruby_dependencies.empty?
-              case rbenv_platform
-              when /(debian|ubuntu)/i
-                run("#{sudo} apt-get install -q -y #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")}")
-              when /redhat/i
-                run("#{sudo} yum install -q -y #{rbenv_ruby_dependencies.map { |x| x.dump }.join(" ")}")
-              end
-            end
+            platform.packages.install(rbenv_ruby_dependencies)
           }
 
           _cset(:rbenv_ruby_versions) { rbenv.versions }
