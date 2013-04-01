@@ -153,7 +153,7 @@ module Capistrano
           _cset(:rbenv_environment_join_keys, %w(DYLD_LIBRARY_PATH LD_LIBRARY_PATH MANPATH PATH))
           def _merge_environment(x, y)
             x.merge(y) { |key, x_val, y_val|
-              if rbenv_environment_join_keys.key?(key)
+              if rbenv_environment_join_keys.include?(key)
                 ( y_val.split(":") + x_val.split(":") ).uniq.join(":")
               else
                 y_val
