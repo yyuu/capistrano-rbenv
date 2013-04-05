@@ -22,8 +22,11 @@ This recipe will install [rbenv](https://github.com/sstephenson/rbenv) and [ruby
 
 To setup rbenv for your application, add following in you `config/deploy.rb`.
 
-    # in "config/deploy.rb"
-    require 'capistrano-rbenv'
+```ruby
+# config/deploy.rb
+require "capistrano-rbenv"
+set :rbenv_ruby_version, "1.9.3-p392"
+```
 
 Following options are available to manage your rbenv.
 
