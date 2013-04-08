@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
-bundle exec vagrant up
+vagrant up
 bundle exec cap test_all
-bundle exec vagrant halt
+vagrant halt
 
 # vim:set ft=sh :

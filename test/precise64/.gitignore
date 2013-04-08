@@ -1,5 +1,5 @@
 /.bundle
-/.vagrant
+/.vagrant*
 /known_hosts
 /tmp
 /vendor
