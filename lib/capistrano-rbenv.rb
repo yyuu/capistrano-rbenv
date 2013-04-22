@@ -10,7 +10,7 @@ module Capistrano
         namespace(:rbenv) {
           _cset(:rbenv_root, "$HOME/.rbenv")
           _cset(:rbenv_path) {
-            # expand to actual path to use this value since rbenv may be executed by users other than `:user`.
+            # expand to actual path since rbenv may be executed by users other than `:user`.
             capture("echo #{rbenv_root.dump}").strip
           }
           _cset(:rbenv_bin_path) { File.join(rbenv_path, "bin") }
