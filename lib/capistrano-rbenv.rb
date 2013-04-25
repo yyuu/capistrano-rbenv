@@ -265,7 +265,7 @@ module Capistrano
             case rbenv_platform.to_sym
             when :debian, :ubuntu
               %w(git-core build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
-            when :redhat, :fedora, :centos, :amazon
+            when :redhat, :fedora, :centos, :amazon, :amazonami
               %w(git-core autoconf glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
             else
               []
