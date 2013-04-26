@@ -10,7 +10,7 @@ module Capistrano
         namespace(:rbenv) {
           _cset(:rbenv_root, "$HOME/.rbenv")
           _cset(:rbenv_path) {
-            # expand to actual path to use this value since rbenv may be executed by users other than `:user`.
+            # expand to actual path since rbenv may be executed by users other than `:user`.
             capture("echo #{rbenv_root.dump}").strip
           }
           _cset(:rbenv_bin_path) { File.join(rbenv_path, "bin") }
@@ -265,8 +265,8 @@ module Capistrano
             case rbenv_platform.to_sym
             when :debian, :ubuntu
               %w(git-core build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
-            when :redhat, :fedora, :centos, :amazon
-              %w(git-core autoconf glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
+            when :redhat, :fedora, :centos, :amazon, :amazonami
+              %w(git-core autoconf gcc-c++ glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
             else
               []
             end
