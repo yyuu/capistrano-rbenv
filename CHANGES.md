@@ -24,3 +24,7 @@ v1.0.3 (Yamashita, Yuu)
 
 * Add support for extra flavors of RedHat.
 * Remove useless gem dependencies.
+
+v1.0.4 (Yamashita, Yuu)
+
+* Fixed support for Amazon Linux. Thanks @tk0miya.
