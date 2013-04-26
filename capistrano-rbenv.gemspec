@@ -16,5 +16,5 @@ Gem::Specification.new do |gem|
   gem.version       = Capistrano::RbEnv::VERSION
 
   gem.add_dependency("capistrano", "< 3")
-  gem.add_dependency("capistrano-platform-resources", ">= 0.1.0")
+  gem.add_dependency("capistrano-platform-resources", ">= 0.1.3")
 end
