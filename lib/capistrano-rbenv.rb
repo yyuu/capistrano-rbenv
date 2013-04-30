@@ -266,7 +266,7 @@ module Capistrano
             when :debian, :ubuntu
               %w(git-core build-essential libreadline6-dev zlib1g-dev libssl-dev bison)
             when :redhat, :fedora, :centos, :amazon, :amazonami
-              %w(git-core autoconf gcc-c++ glibc-devel patch readline readline-devel zlib zlib-devel openssl bison)
+              %w(git-core autoconf gcc-c++ glibc-devel patch readline readline-devel zlib zlib-devel openssl openssl-devel bison)
             else
               []
             end
