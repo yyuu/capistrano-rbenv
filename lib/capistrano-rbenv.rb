@@ -33,11 +33,11 @@ module Capistrano
             "RBENV_ROOT" => rbenv_path,
             "PATH" => [ rbenv_shims_path, rbenv_bin_path, "$PATH" ].join(":"),
           }}
-          _cset(:rbenv_repository, 'git://github.com/sstephenson/rbenv.git')
-          _cset(:rbenv_branch, 'master')
+          _cset(:rbenv_repository, "https://github.com/sstephenson/rbenv.git")
+          _cset(:rbenv_branch, "master")
 
           _cset(:rbenv_plugins) {{
-            "ruby-build" => { :repository => "git://github.com/sstephenson/ruby-build.git", :branch => "master" },
+            "ruby-build" => { :repository => "https://github.com/sstephenson/ruby-build.git", :branch => "master" },
           }}
           _cset(:rbenv_plugins_options, {}) # for backward compatibility. plugin options can be configured from :rbenv_plugins.
           _cset(:rbenv_plugins_path) {
