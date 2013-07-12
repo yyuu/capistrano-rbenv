@@ -272,7 +272,13 @@ module Capistrano
             end
           }
           task(:dependencies, :except => { :no_release => true }) {
-            platform.packages.install(rbenv_ruby_dependencies)
+            begin
+              platform.packages.install(rbenv_ruby_dependencies)
+            rescue
+              missing_dependencies = rbenv_ruby_dependencies.reject { |dep| platform.packages.installed?(dep) rescue false }
+              abort("Failed to install rbenv dependencies: #{missing_dependencies.join(", ")}\n\n" +
+                    "Please install missing packages from outside of Capistrano, or allow #{user} to invoke commands via sudo(8).")
+            end
           }
 
           _cset(:rbenv_ruby_versions) { rbenv.versions }
